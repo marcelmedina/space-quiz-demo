@@ -149,11 +149,14 @@
   .option.dim { opacity: .5; }
   .feedback {
     min-height: 24px; margin-top: 14px; font-size: 14px; font-weight: 500;
+  }
+  .feedback, .fact {
     opacity: 0; transform: translateY(4px); transition: opacity .25s, transform .25s;
   }
-  .feedback.show { opacity: 1; transform: none; }
+  .feedback.show, .fact.show { opacity: 1; transform: none; }
   .feedback.good { color: var(--correct); }
   .feedback.bad { color: var(--wrong); }
+  .fact { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
   .btn {
     font: inherit; font-size: 15px; font-weight: 600;
     width: 100%; margin-top: 14px; padding: 12px;
@@ -202,16 +205,16 @@
 
 <script>
 const QUESTIONS = [
-  { q: "Who was the first human to travel into space?", a: ["Neil Armstrong", "Yuri Gagarin", "Alan Shepard", "John Glenn"], c: 1 },
-  { q: "Which mission first landed humans on the Moon?", a: ["Apollo 8", "Apollo 11", "Apollo 13", "Gemini 4"], c: 1 },
-  { q: "What was the name of the first artificial satellite?", a: ["Explorer 1", "Vostok 1", "Sputnik 1", "Telstar"], c: 2 },
-  { q: "Which planet has the tallest known volcano, Olympus Mons?", a: ["Venus", "Mars", "Jupiter", "Mercury"], c: 1 },
-  { q: "Which spacecraft became the first to enter interstellar space?", a: ["Voyager 1", "Pioneer 10", "New Horizons", "Cassini"], c: 0 },
-  { q: "Which NASA rover landed in Jezero Crater in 2021?", a: ["Curiosity", "Opportunity", "Spirit", "Perseverance"], c: 3 },
-  { q: "Which telescope launched in 2021 observes mainly in infrared?", a: ["Hubble", "James Webb", "Spitzer", "Kepler"], c: 1 },
-  { q: "Who was the first woman to fly in space?", a: ["Sally Ride", "Valentina Tereshkova", "Mae Jemison", "Eileen Collins"], c: 1 },
-  { q: "Roughly how long does sunlight take to reach Earth?", a: ["8 seconds", "8 minutes", "8 hours", "8 days"], c: 1 },
-  { q: "Which mission flew past Pluto in 2015?", a: ["Juno", "Dawn", "New Horizons", "Rosetta"], c: 2 },
+  { q: "Who was the first human to travel into space?", a: ["Neil Armstrong", "Yuri Gagarin", "Alan Shepard", "John Glenn"], c: 1, fact: "Gagarin's Vostok 1 flight completed one orbit of Earth in 108 minutes." },
+  { q: "Which mission first landed humans on the Moon?", a: ["Apollo 8", "Apollo 11", "Apollo 13", "Gemini 4"], c: 1, fact: "While Neil Armstrong and Buzz Aldrin explored the Moon, Michael Collins stayed in orbit aboard the command module." },
+  { q: "What was the name of the first artificial satellite?", a: ["Explorer 1", "Vostok 1", "Sputnik 1", "Telstar"], c: 2, fact: "Sputnik 1 circled Earth about once every 96 minutes and sent radio signals for roughly three weeks." },
+  { q: "Which planet has the tallest known volcano, Olympus Mons?", a: ["Venus", "Mars", "Jupiter", "Mercury"], c: 1, fact: "Olympus Mons is about 22 kilometres high and roughly 600 kilometres across." },
+  { q: "Which spacecraft became the first to enter interstellar space?", a: ["Voyager 1", "Pioneer 10", "New Horizons", "Cassini"], c: 0, fact: "Voyager 1 crossed the heliopause into interstellar space in 2012, more than 35 years after launch." },
+  { q: "Which NASA rover landed in Jezero Crater in 2021?", a: ["Curiosity", "Opportunity", "Spirit", "Perseverance"], c: 3, fact: "Perseverance carried Ingenuity, which made the first powered, controlled flight on another planet in 2021." },
+  { q: "Which telescope launched in 2021 observes mainly in infrared?", a: ["Hubble", "James Webb", "Spitzer", "Kepler"], c: 1, fact: "The James Webb Space Telescope orbits the Sun near the Sun-Earth L2 point, about 1.5 million kilometres from Earth." },
+  { q: "Who was the first woman to fly in space?", a: ["Sally Ride", "Valentina Tereshkova", "Mae Jemison", "Eileen Collins"], c: 1, fact: "Tereshkova completed 48 orbits of Earth during her 1963 Vostok 6 mission." },
+  { q: "Roughly how long does sunlight take to reach Earth?", a: ["8 seconds", "8 minutes", "8 hours", "8 days"], c: 1, fact: "Because Earth's orbit is slightly elliptical, the travel time varies; on average, sunlight takes about 8 minutes and 20 seconds to arrive." },
+  { q: "Which mission flew past Pluto in 2015?", a: ["Juno", "Dawn", "New Horizons", "Rosetta"], c: 2, fact: "New Horizons made the first close flyby of Pluto on July 14, 2015, revealing a surprisingly varied icy world." },
 ];
 
 const card = document.getElementById("card");
@@ -241,6 +244,7 @@ function render() {
         ${item.a.map((t, i) => `<button class="option" data-i="${i}"><span class="key">${"ABCD"[i]}</span><span>${t}</span></button>`).join("")}
       </div>
       <div class="feedback" id="feedback"></div>
+      ${item.fact ? '<p class="fact" id="fact" hidden></p>' : ""}
       <button class="btn" id="next" hidden>${index === QUESTIONS.length - 1 ? "See results" : "Next question →"}</button>
     </div>`;
   const bar = document.getElementById("bar");
@@ -271,7 +275,15 @@ function choose(i) {
   }
   buttons.forEach((b, j) => { if (j !== i && j !== item.c) b.classList.add("dim"); });
   document.getElementById("meta").dataset.status = i === item.c ? "correct" : "wrong";
-  requestAnimationFrame(() => fb.classList.add("show"));
+  const fact = item.fact ? document.getElementById("fact") : null;
+  if (fact) {
+    fact.textContent = item.fact;
+    fact.hidden = false;
+  }
+  requestAnimationFrame(() => {
+    fb.classList.add("show");
+    if (fact) fact.classList.add("show");
+  });
   const bar = document.getElementById("bar");
   bar.style.width = ((index + 1) / QUESTIONS.length * 100) + "%";
   bar.parentElement.setAttribute("aria-valuenow", index + 1);

@@ -22,7 +22,9 @@ Open `index.html` in any modern browser. That's it.
 Edit the `QUESTIONS` array in `index.html`. Each entry is:
 
 ```js
-{ q: "Question text", a: ["Choice A", "Choice B", "Choice C", "Choice D"], c: 1 } // c = index of the correct choice
+{ q: "Question text", a: ["Choice A", "Choice B", "Choice C", "Choice D"], c: 1, fact: "A short fact shown after answering." } // c = index of the correct choice; fact is optional
 ```
+
+The optional `fact` string can contain one or two sentences. It appears below the answer feedback after the player answers; omit it if a question has no fact.
 
 The results thresholds use the fraction of correct answers, so they still work if you change the number of questions.
