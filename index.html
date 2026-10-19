@@ -171,6 +171,9 @@
     background: linear-gradient(90deg, var(--primary), var(--primary-2));
     -webkit-background-clip: text; background-clip: text; color: transparent; }
   .results p { color: var(--muted); margin: 0; }
+  .result-actions { display: flex; gap: 10px; }
+  .result-actions .btn { flex: 1; }
+  .share-status { min-height: 22px; margin-top: 10px !important; font-size: 14px; }
   .fade-in { animation: fadeIn .35s ease; }
 
   @keyframes shake {
@@ -299,9 +302,52 @@ function results() {
       <h2>${title}</h2>
       <div class="big">${score} / ${QUESTIONS.length}</div>
       <p>${msg}</p>
-      <button class="btn" id="restart">Play again</button>
+      <div class="result-actions">
+        <button class="btn" id="share">Share result</button>
+        <button class="btn" id="restart">Play again</button>
+      </div>
+      <p class="share-status" id="share-status" role="status" aria-live="polite"></p>
     </div>`;
+  document.getElementById("share").addEventListener("click", shareResult);
   document.getElementById("restart").addEventListener("click", () => { index = 0; score = 0; render(); });
+}
+
+async function shareResult(event) {
+  const button = event.currentTarget;
+  const status = document.getElementById("share-status");
+  const result = card.querySelector(".results");
+  const emoji = result.querySelector(".emoji").textContent;
+  const title = result.querySelector("h2").textContent;
+  const shareText = `${emoji} ${title}${/[.!?]$/.test(title) ? "" : "."} I scored ${score}/${QUESTIONS.length} on the Space Exploration Quiz.`;
+  button.disabled = true;
+  status.textContent = "";
+
+  try {
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ text: shareText });
+        status.textContent = "Share dialog opened.";
+        return;
+      } catch (error) {
+        if (error.name === "AbortError") {
+          status.textContent = "Sharing canceled.";
+          return;
+        }
+      }
+    }
+
+    if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
+      throw new Error("Clipboard access is unavailable.");
+    }
+    await navigator.clipboard.writeText(shareText);
+    button.textContent = "Copied!";
+    status.textContent = "Result copied to clipboard.";
+    setTimeout(() => { button.textContent = "Share result"; }, 2000);
+  } catch {
+    status.textContent = `Couldn't share or copy automatically. Copy this: ${shareText}`;
+  } finally {
+    button.disabled = false;
+  }
 }
 
 document.addEventListener("keydown", e => {
