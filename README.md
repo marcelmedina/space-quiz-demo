@@ -17,6 +17,20 @@ A 10-question space exploration quiz in a single, self-contained `index.html`. I
 
 Open `index.html` in any modern browser. That's it.
 
+## GitHub Pages
+
+Play online at [Space Exploration Quiz](https://marcelmedina.github.io/space-quiz-demo/).
+
+The [Deploy GitHub Pages workflow](.github/workflows/pages.yml) publishes the site
+on every push to `main`, or when run manually from the Actions tab on `main`.
+No build is needed: it packages only `index.html` as the Pages artifact.
+Pull requests run the same packaging check without deploying.
+
+In the repository's **Settings > Pages**, the deployment source must be
+**GitHub Actions**. The deployment job uses the `github-pages` environment and
+the workflow's `pages: write` and `id-token: write` permissions; no deployment
+secret is required.
+
 ## Customize
 
 Edit the `QUESTIONS` array in `index.html`. Each entry is:
