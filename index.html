@@ -174,6 +174,9 @@
     background: linear-gradient(90deg, var(--primary), var(--primary-2));
     -webkit-background-clip: text; background-clip: text; color: transparent; }
   .results p { color: var(--muted); margin: 0; }
+  .result-actions { display: flex; gap: 10px; }
+  .result-actions .btn { flex: 1; }
+  .share-status { min-height: 22px; margin-top: 10px !important; font-size: 14px; }
   .fade-in { animation: fadeIn .35s ease; }
 
   @keyframes shake {
@@ -218,18 +221,37 @@ const QUESTIONS = [
 ];
 
 const card = document.getElementById("card");
-let index = 0, score = 0;
+let index = 0, score = 0, questions = [];
 const pad = n => String(n).padStart(2, "0");
 
+function shuffle(items) {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+function startGame() {
+  index = 0;
+  score = 0;
+  questions = shuffle(QUESTIONS.map(item => {
+    const answers = shuffle(item.a.map((text, i) => ({ text, correct: i === item.c })));
+    return { q: item.q, a: answers.map(answer => answer.text), c: answers.findIndex(answer => answer.correct), fact: item.fact };
+  }));
+  render();
+}
+
 function render() {
-  const item = QUESTIONS[index];
+  const item = questions[index];
   card.innerHTML = `
     <div class="meta" id="meta" role="group" aria-label="Mission status">
       <div class="readout">
         <span class="led" aria-hidden="true"></span>
         <span class="label" aria-hidden="true">Mission</span>
-        <span class="value" aria-hidden="true">Q<b>${pad(index + 1)}</b>/${pad(QUESTIONS.length)}</span>
-        <span class="sr-only">Question ${index + 1} of ${QUESTIONS.length}</span>
+        <span class="value" aria-hidden="true">Q<b>${pad(index + 1)}</b>/${pad(questions.length)}</span>
+        <span class="sr-only">Question ${index + 1} of ${questions.length}</span>
       </div>
       <div class="readout">
         <span class="label" aria-hidden="true">Score</span>
@@ -237,7 +259,7 @@ function render() {
         <span class="sr-only" id="score-sr">Score: ${score}</span>
       </div>
     </div>
-    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="${QUESTIONS.length}" aria-valuenow="${index}"><div id="bar"></div></div>
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="${questions.length}" aria-valuenow="${index}"><div id="bar"></div></div>
     <div class="fade-in">
       <p class="question">${item.q}</p>
       <div class="options">
@@ -245,16 +267,16 @@ function render() {
       </div>
       <div class="feedback" id="feedback"></div>
       ${item.fact ? '<p class="fact" id="fact" hidden></p>' : ""}
-      <button class="btn" id="next" hidden>${index === QUESTIONS.length - 1 ? "See results" : "Next question →"}</button>
+      <button class="btn" id="next" hidden>${index === questions.length - 1 ? "See results" : "Next question →"}</button>
     </div>`;
   const bar = document.getElementById("bar");
-  bar.style.width = (index / QUESTIONS.length * 100) + "%";
+  bar.style.width = (index / questions.length * 100) + "%";
   card.querySelectorAll(".option").forEach(b => b.addEventListener("click", () => choose(+b.dataset.i)));
   document.getElementById("next").addEventListener("click", next);
 }
 
 function choose(i) {
-  const item = QUESTIONS[index];
+  const item = questions[index];
   const buttons = [...card.querySelectorAll(".option")];
   buttons.forEach(b => b.disabled = true);
   const fb = document.getElementById("feedback");
@@ -285,7 +307,7 @@ function choose(i) {
     if (fact) fact.classList.add("show");
   });
   const bar = document.getElementById("bar");
-  bar.style.width = ((index + 1) / QUESTIONS.length * 100) + "%";
+  bar.style.width = ((index + 1) / questions.length * 100) + "%";
   bar.parentElement.setAttribute("aria-valuenow", index + 1);
   const nextBtn = document.getElementById("next");
   nextBtn.hidden = false;
@@ -294,11 +316,11 @@ function choose(i) {
 
 function next() {
   index++;
-  index < QUESTIONS.length ? render() : results();
+  index < questions.length ? render() : results();
 }
 
 function results() {
-  const pct = score / QUESTIONS.length;
+  const pct = score / questions.length;
   const [emoji, title, msg] =
     pct === 1   ? ["🤩", "Mission Commander!", "A perfect score — you're ready for launch."] :
     pct >= .8   ? ["🚀", "Ace Astronaut!", "Outstanding knowledge of the cosmos."] :
@@ -309,11 +331,54 @@ function results() {
     <div class="results fade-in">
       <div class="emoji" aria-hidden="true">${emoji}</div>
       <h2>${title}</h2>
-      <div class="big">${score} / ${QUESTIONS.length}</div>
+      <div class="big">${score} / ${questions.length}</div>
       <p>${msg}</p>
-      <button class="btn" id="restart">Play again</button>
+      <div class="result-actions">
+        <button class="btn" id="share">Share result</button>
+        <button class="btn" id="restart">Play again</button>
+      </div>
+      <p class="share-status" id="share-status" role="status" aria-live="polite"></p>
     </div>`;
-  document.getElementById("restart").addEventListener("click", () => { index = 0; score = 0; render(); });
+  document.getElementById("share").addEventListener("click", shareResult);
+  document.getElementById("restart").addEventListener("click", startGame);
+}
+
+async function shareResult(event) {
+  const button = event.currentTarget;
+  const status = document.getElementById("share-status");
+  const result = card.querySelector(".results");
+  const emoji = result.querySelector(".emoji").textContent;
+  const title = result.querySelector("h2").textContent;
+  const shareText = `${emoji} ${title}${/[.!?]$/.test(title) ? "" : "."} I scored ${score}/${questions.length} on the Space Exploration Quiz.`;
+  button.disabled = true;
+  status.textContent = "";
+
+  try {
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ text: shareText });
+        status.textContent = "Share dialog opened.";
+        return;
+      } catch (error) {
+        if (error.name === "AbortError") {
+          status.textContent = "Sharing canceled.";
+          return;
+        }
+      }
+    }
+
+    if (!navigator.clipboard || typeof navigator.clipboard.writeText !== "function") {
+      throw new Error("Clipboard access is unavailable.");
+    }
+    await navigator.clipboard.writeText(shareText);
+    button.textContent = "Copied!";
+    status.textContent = "Result copied to clipboard.";
+    setTimeout(() => { button.textContent = "Share result"; }, 2000);
+  } catch {
+    status.textContent = `Couldn't share or copy automatically. Copy this: ${shareText}`;
+  } finally {
+    button.disabled = false;
+  }
 }
 
 document.addEventListener("keydown", e => {
@@ -324,7 +389,7 @@ document.addEventListener("keydown", e => {
   if (i >= 0 && opts[i] && !opts[i].disabled) opts[i].click();
 });
 
-render();
+startGame();
 </script>
 </body>
 </html>
